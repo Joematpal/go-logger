@@ -4,18 +4,20 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Logger represent common interface for logging function
 type Logger interface {
+	Debugf(format string, args ...interface{})
+	Debug(args ...interface{})
+	Error(args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 	Fatal(args ...interface{})
 	Infof(format string, args ...interface{})
 	Info(args ...interface{})
 	Warnf(format string, args ...interface{})
-	Debugf(format string, args ...interface{})
-	Debug(args ...interface{})
 	WithCorrelationID(id string) Logger
 }
 
@@ -24,16 +26,32 @@ type logger struct {
 	correlationID string
 }
 
-func New() (Logger, error) {
-	logr, err := zap.NewProduction()
+func New(opts ...Option) (Logger, error) {
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	for _, opt := range opts {
+		if err := opt.applyOption(&config); err != nil {
+			return nil, err
+		}
+	}
+
+	logr, err := config.Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build: %v", err)
 	}
 	sugar := logr.Sugar()
 
 	return &logger{
 		log: sugar,
 	}, err
+}
+
+func (l *logger) Error(args ...interface{}) {
+	if l.correlationID != "" {
+		args = append([]interface{}{fmt.Sprintf("correlationID=%s", l.correlationID)}, args...)
+	}
+	l.log.Error(args...)
 }
 
 func (l *logger) Errorf(format string, args ...interface{}) {
