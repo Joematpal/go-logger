@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -14,7 +15,17 @@ func NewApp() *cli.App {
 	return &cli.App{
 		Flags: flags.LogFlags,
 		Action: func(c *cli.Context) error {
-			logr, err := logger.New()
+			opts := []logger.Option{
+				logger.WithEnv(logger.LogEnv(c.Int(flags.LogEnv))),
+				logger.WithLevel(logger.LogLevel(c.Int(flags.LogLevel))),
+				logger.WithLogStacktrace(c.Bool(flags.LogStacktrace)),
+			}
+
+			if encoding := c.String(flags.LogEncoding); encoding != "" {
+				opts = append(opts, logger.WithEncoding(encoding))
+			}
+
+			logr, err := logger.New(opts...)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -39,8 +50,9 @@ func NewApp() *cli.App {
 			}
 
 			if err := client.Something(); err != nil {
-				log.Fatal(err)
+				return fmt.Errorf("client.Something: %v", err)
 			}
+
 			return nil
 		},
 	}
@@ -48,6 +60,6 @@ func NewApp() *cli.App {
 
 func main() {
 	if err := NewApp().Run(os.Args); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

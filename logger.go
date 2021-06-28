@@ -17,6 +17,10 @@ type Logger interface {
 	Fatal(args ...interface{})
 	Infof(format string, args ...interface{})
 	Info(args ...interface{})
+	DPanicf(format string, args ...interface{})
+	DPanic(args ...interface{})
+	Panicf(format string, args ...interface{})
+	Panic(args ...interface{})
 	Warnf(format string, args ...interface{})
 
 	WithCorrelationID(id string) Logger
@@ -109,6 +113,34 @@ func (l *logger) Debug(args ...interface{}) {
 		args = append([]interface{}{fmt.Sprintf("correlationID=%s", l.correlationID)}, args...)
 	}
 	l.log.Debug(args...)
+}
+
+func (l *logger) DPanicf(format string, args ...interface{}) {
+	if l.correlationID != "" {
+		format = fmt.Sprintf("correlationID=%s %s", l.correlationID, format)
+	}
+	l.log.DPanicf(format, args...)
+}
+
+func (l *logger) DPanic(args ...interface{}) {
+	if l.correlationID != "" {
+		args = append([]interface{}{fmt.Sprintf("correlationID=%s", l.correlationID)}, args...)
+	}
+	l.log.DPanic(args...)
+}
+
+func (l *logger) Panicf(format string, args ...interface{}) {
+	if l.correlationID != "" {
+		format = fmt.Sprintf("correlationID=%s %s", l.correlationID, format)
+	}
+	l.log.Panicf(format, args...)
+}
+
+func (l *logger) Panic(args ...interface{}) {
+	if l.correlationID != "" {
+		args = append([]interface{}{fmt.Sprintf("correlationID=%s", l.correlationID)}, args...)
+	}
+	l.log.Panic(args...)
 }
 
 func (l *logger) WithCorrelationID(id string) Logger {
