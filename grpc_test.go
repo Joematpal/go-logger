@@ -32,8 +32,9 @@ func TestGetCorrelationIDFromMetadata(t *testing.T) {
 			args: args{
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{}),
 			},
-			need: "some id",
-			want: "some id",
+			need:    "some id",
+			want:    "some id",
+			wantErr: true,
 		},
 		{
 			name: "should pass; with correlation_id",

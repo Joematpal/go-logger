@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrNoIncomingMetadata = errors.New("no incoming metadata")
+	ErrNoCorrelationID    = errors.New("no correlation id")
 	newID                 = func() string {
 		return xid.New().String()
 	}
@@ -34,6 +35,9 @@ func LoggingStreamServerInterceptor(logger Logger) grpc.StreamServerInterceptor 
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		cID, err := GetCorrelationIDFromMetadata(ss.Context())
 		if err != nil {
+			if !errors.Is(err, ErrNoCorrelationID) {
+				return err
+			}
 			logger.Debug("no correlation id")
 			md, _ := metadata.FromIncomingContext(ss.Context())
 			md = metadata.Join(md, metadata.New(map[string]string{Key_CorrelationID: cID}))
@@ -54,7 +58,11 @@ func LoggingStreamServerInterceptor(logger Logger) grpc.StreamServerInterceptor 
 func LoggingUnaryServerInterceptor(logger Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		cID, err := GetCorrelationIDFromMetadata(ctx)
+
 		if err != nil {
+			if !errors.Is(err, ErrNoCorrelationID) {
+				return nil, err
+			}
 			md, _ := metadata.FromIncomingContext(ctx)
 			md = metadata.Join(md, metadata.New(map[string]string{Key_CorrelationID: cID}))
 			logger.Debug("no correlation id")
@@ -68,6 +76,7 @@ func LoggingUnaryServerInterceptor(logger Logger) grpc.UnaryServerInterceptor {
 		if err != nil {
 			logger.Errorf("unary_server_interceptor=%v", err)
 		}
+
 		return resp, err
 	}
 }
@@ -89,5 +98,5 @@ func GetCorrelationIDFromMetadata(ctx context.Context) (string, error) {
 		}
 	}
 
-	return newID(), nil
+	return newID(), ErrNoCorrelationID
 }
