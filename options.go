@@ -37,7 +37,7 @@ func WithEncoding(encoding string) Option {
 
 func WithLogStacktrace(lst bool) Option {
 	return applyOptionFunc(func(c *zap.Config) error {
-		c.DisableStacktrace = lst
+		c.DisableStacktrace = !lst
 		return nil
 	})
 }
