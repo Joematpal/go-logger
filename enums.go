@@ -84,23 +84,25 @@ type LogEnv int
 const (
 	Development LogEnv = iota
 	Production
+	prod = "prod"
+	dev  = "dev"
 )
 
 func (e LogEnv) String() string {
 	switch e {
 	case Production:
-		return "prod"
+		return prod
 	case Development:
-		return "dev"
+		return dev
 	}
 	return ""
 }
 
 func ParseLogEnv(env string) LogEnv {
 	switch strings.ToLower(env) {
-	case "prod":
+	case prod:
 		return Production
-	case "dev":
+	case dev:
 		return Development
 	}
 	return Development
@@ -115,21 +117,21 @@ type LogEnvEnum struct {
 func NewLogEnvEnum() *LogEnvEnum {
 	return &LogEnvEnum{
 		Enum: []string{
-			"prod",
-			"dev",
+			prod,
+			dev,
 		},
-		Default: "dev",
+		Default: dev,
 	}
 }
 
 var LogEnvEnum_values = map[string]LogEnv{
-	"prod": Production,
-	"dev":  Development,
+	prod: Production,
+	dev:  Development,
 }
 
 var LogEnvEnum_keys = map[LogEnv]string{
-	Production:  "prod",
-	Development: "dev",
+	Production:  prod,
+	Development: dev,
 }
 
 func (e *LogEnvEnum) Set(value string) error {

@@ -18,21 +18,25 @@ var LogFlags = []cli.Flag{
 	&cli.BoolFlag{
 		Name:    LogStacktrace,
 		Value:   true,
+		Usage:   "enables the stacktrace after an error or higher log",
 		Aliases: []string{"lst"},
 		EnvVars: flagNamesToEnv(LogStacktrace, "LST"),
 	},
 	&cli.GenericFlag{
 		Name:    LogEnv,
+		Usage:   "values: prod, dev",
 		Value:   logger.NewLogEnvEnum(),
 		EnvVars: flagNamesToEnv(LogEnv),
 	},
 	&cli.GenericFlag{
 		Name:    LogLevel,
+		Usage:   "values: info, warn, error, dpanic, panic, fatal",
 		Value:   logger.NewLogLevelEnum(),
 		EnvVars: flagNamesToEnv(LogLevel),
 	},
 	&cli.GenericFlag{
 		Name:    LogEncoding,
+		Usage:   "values: json, encoding",
 		Value:   logger.NewLogEncodingEnum(),
 		EnvVars: flagNamesToEnv(LogEncoding),
 	},

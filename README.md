@@ -17,7 +17,7 @@ info: InfoLevel is the default logging priority.
 warn: WarnLevel logs are more important than Info, but don't need individual
 human review.
 	
-errors: ErrorLevel logs are high-priority. If an application is running smoothly,
+error: ErrorLevel logs are high-priority. If an application is running smoothly,
 it shouldn't generate any error-level logs.
 	
 dpanic: DPanicLevel logs are particularly important errors. In development the
