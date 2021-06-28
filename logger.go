@@ -18,6 +18,7 @@ type Logger interface {
 	Infof(format string, args ...interface{})
 	Info(args ...interface{})
 	Warnf(format string, args ...interface{})
+
 	WithCorrelationID(id string) Logger
 }
 

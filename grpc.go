@@ -9,6 +9,14 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var (
+	ErrNoIncomingMetadata = errors.New("no incoming metadata")
+	newID                 = func() string {
+		return xid.New().String()
+	}
+	Key_CorrelationID = "correlation_id"
+)
+
 type wrappedStream struct {
 	ctx context.Context
 	grpc.ServerStream
@@ -28,7 +36,7 @@ func LoggingStreamServerInterceptor(logger Logger) grpc.StreamServerInterceptor 
 		if err != nil {
 			logger.Debug("no correlation id")
 			md, _ := metadata.FromIncomingContext(ss.Context())
-			md = metadata.Join(md, metadata.New(map[string]string{"correlation_id": cID}))
+			md = metadata.Join(md, metadata.New(map[string]string{Key_CorrelationID: cID}))
 			ss = newWrappedStream(metadata.NewIncomingContext(ss.Context(), md), ss)
 		}
 
@@ -48,7 +56,7 @@ func LoggingUnaryServerInterceptor(logger Logger) grpc.UnaryServerInterceptor {
 		cID, err := GetCorrelationIDFromMetadata(ctx)
 		if err != nil {
 			md, _ := metadata.FromIncomingContext(ctx)
-			md = metadata.Join(md, metadata.New(map[string]string{"correlation_id": cID}))
+			md = metadata.Join(md, metadata.New(map[string]string{Key_CorrelationID: cID}))
 			logger.Debug("no correlation id")
 			ctx = metadata.NewIncomingContext(ctx, md)
 		}
@@ -69,14 +77,17 @@ func LoggingUnaryServerInterceptor(logger Logger) grpc.UnaryServerInterceptor {
 func GetCorrelationIDFromMetadata(ctx context.Context) (string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return "", errors.New("no incoming metdata")
+		return "", ErrNoIncomingMetadata
 	}
-	values := md.Get("correlation_id")
+
+	values := md.Get(Key_CorrelationID)
+
 	for _, val := range values {
+
 		if val != "" {
 			return val, nil
 		}
 	}
 
-	return xid.New().String(), errors.New("empty correlation_id")
+	return newID(), nil
 }
