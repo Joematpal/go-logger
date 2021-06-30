@@ -16,9 +16,10 @@ func NewApp() *cli.App {
 		Flags: flags.LogFlags,
 		Action: func(c *cli.Context) error {
 			opts := []logger.Option{
-				logger.WithEnv(logger.LogEnv(c.Int(flags.LogEnv))),
-				logger.WithLevel(logger.LogLevel(c.Int(flags.LogLevel))),
+				logger.WithEnv(c.String(flags.LogEnv)),
+				logger.WithLevel(c.String(flags.LogLevel)),
 				logger.WithLogStacktrace(c.Bool(flags.LogStacktrace)),
+				logger.WithEncoding(c.String(flags.LogEncoding)),
 			}
 
 			if encoding := c.String(flags.LogEncoding); encoding != "" {

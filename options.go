@@ -1,6 +1,11 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
 
 type Option interface {
 	applyOption(*zap.Config) error
@@ -12,16 +17,20 @@ func (f applyOptionFunc) applyOption(o *zap.Config) error {
 	return f(o)
 }
 
-func WithLevel(level LogLevel) Option {
+func WithLevel(level string) Option {
 	return applyOptionFunc(func(c *zap.Config) error {
-		c.Level = zap.NewAtomicLevelAt(level)
+		val, ok := LogLevelEnum_values[level]
+		if !ok {
+			return fmt.Errorf("invalid log level: %s", level)
+		}
+		c.Level = zap.NewAtomicLevelAt(zapcore.Level(val))
 		return nil
 	})
 }
 
-func WithEnv(env LogEnv) Option {
+func WithEnv(env string) Option {
 	return applyOptionFunc(func(c *zap.Config) error {
-		if env == Development {
+		if env == dev {
 			c.Development = true
 		}
 		return nil
