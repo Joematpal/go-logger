@@ -31,7 +31,7 @@ func newWrappedStream(ctx context.Context, s grpc.ServerStream) grpc.ServerStrea
 	return &wrappedStream{ctx, s}
 }
 
-func LoggingStreamServerInterceptor(logger Logger) grpc.StreamServerInterceptor {
+func LoggingStreamServerInterceptor(logger CorrelationLogger) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		cID, err := GetCorrelationIDFromMetadata(ss.Context())
 		if err != nil {
@@ -55,7 +55,7 @@ func LoggingStreamServerInterceptor(logger Logger) grpc.StreamServerInterceptor 
 	}
 }
 
-func LoggingUnaryServerInterceptor(logger Logger) grpc.UnaryServerInterceptor {
+func LoggingUnaryServerInterceptor(logger CorrelationLogger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		cID, err := GetCorrelationIDFromMetadata(ctx)
 
