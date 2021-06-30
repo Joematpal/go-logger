@@ -30,7 +30,7 @@ var LogFlags = []cli.Flag{
 	},
 	&cli.GenericFlag{
 		Name:    LogLevel,
-		Usage:   "values: info, warn, error, dpanic, panic, fatal",
+		Usage:   "values: debug, info, warn, error, dpanic, panic, fatal",
 		Value:   logger.NewLogLevelEnum(),
 		EnvVars: flagNamesToEnv(LogLevel),
 	},
