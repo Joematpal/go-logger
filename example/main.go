@@ -26,18 +26,17 @@ func NewApp() *cli.App {
 				opts = append(opts, logger.WithEncoding(encoding))
 			}
 
-			logr, err := logger.New(opts...)
+			logr, err := logger.NewCorrelationLogger(opts...)
 			if err != nil {
 				log.Fatal(err)
 			}
-			logr.Debug("test ", "more")
-			logr.Debug("1 ", "2 ")
+			logr.Debug("test", "more")
+			logr.Debug("1", "2 ")
 			logr.Debugf("key=%s", "value")
 
 			// With Correlation ID
-
 			clogr := logr.WithCorrelationID("test_id")
-			clogr.Debug("debug stuff ", "and another message")
+			clogr.Debug("debug stuff", "and another message")
 			clogr.Debugf("magic=%s", "spell")
 			clogr.Info("test")
 			clogr.Infof("somthing %s", "special")
