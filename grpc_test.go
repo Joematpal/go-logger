@@ -104,7 +104,7 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 		{
 			name: "should pass; with correlation id",
 			args: args{
-				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{correlationID: []string{"test_with_cor_id"}}),
+				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{CorrelationID: []string{"test_with_cor_id"}}),
 			},
 			wants: []want{
 				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", UnaryServerInterceptor: "test/test/test"},
@@ -236,7 +236,7 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 		{
 			name: "should pass; with correlation id",
 			args: args{
-				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{correlationID: []string{"test_with_cor_id"}}),
+				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{CorrelationID: []string{"test_with_cor_id"}}),
 			},
 			wants: []want{
 				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", UnaryServerInterceptor: "test/test/test"},

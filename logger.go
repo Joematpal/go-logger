@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	correlationID = "correlation_id"
+	CorrelationID = "correlation_id"
 )
 
 // Logger represent common interface for logging function
@@ -280,10 +280,10 @@ func (l *logger) WithCorrelationID(id string) CorrelationLogger {
 func getFields(cID string, fields fields) []zapcore.Field {
 	out := []zapcore.Field{}
 	if cID != "" {
-		out = append(out, zap.String(correlationID, cID))
+		out = append(out, zap.String(CorrelationID, cID))
 	}
 	for _, field := range fields {
-		if field.key == correlationID {
+		if field.key == CorrelationID {
 			continue
 		}
 		out = append(out, zap.Any(field.key, field.value))
