@@ -159,25 +159,25 @@ type LogEncoding int
 const (
 	JSON LogEncoding = iota
 	Console
-	json    = "json"
-	console = "console"
+	jsonEncoder    = "json"
+	consoleEncoder = "console"
 )
 
 func (e LogEncoding) String() string {
 	switch e {
 	case JSON:
-		return json
+		return jsonEncoder
 	case Console:
-		return console
+		return consoleEncoder
 	}
 	return ""
 }
 
 func ParseLogEncoding(env string) LogEncoding {
 	switch strings.ToLower(env) {
-	case json:
+	case jsonEncoder:
 		return JSON
-	case console:
+	case consoleEncoder:
 		return Console
 	}
 	return Console
@@ -192,21 +192,21 @@ type LogEncodingEnum struct {
 func NewLogEncodingEnum() *LogEncodingEnum {
 	return &LogEncodingEnum{
 		Enum: []string{
-			json,
-			console,
+			jsonEncoder,
+			consoleEncoder,
 		},
-		Default: console,
+		Default: consoleEncoder,
 	}
 }
 
 var LogEncodingEnum_values = map[string]LogEncoding{
-	json:    JSON,
-	console: Console,
+	jsonEncoder:    JSON,
+	consoleEncoder: Console,
 }
 
 var LogEncodingEnum_keys = map[LogEncoding]string{
-	JSON:    json,
-	Console: console,
+	JSON:    jsonEncoder,
+	Console: consoleEncoder,
 }
 
 func (e *LogEncodingEnum) Set(value string) error {

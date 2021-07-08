@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	correlationID = "correlationId"
+	correlationID = "correlation_id"
 )
 
 // Logger represent common interface for logging function
@@ -43,20 +43,42 @@ type SugaredLogger interface {
 type logger struct {
 	log           SugaredLogger
 	correlationID string
+	fields        fields
+}
+
+type FieldLogger interface {
+	// Logger
+	// WithCorrelationID(id string) CorrelationLogger
+	CorrelationLogger
+	WithField(key string, value interface{}) FieldLogger
+	WithFields(in ...Field) FieldLogger
 }
 
 func New(opts ...Option) (Logger, error) {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	zapc := zap.NewProductionConfig()
+	config := &Config{
+		zap: &zapc,
+	}
+	config.zap.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	for _, opt := range opts {
-		if err := opt.applyOption(&config); err != nil {
+		if err := opt.applyOption(config); err != nil {
 			return nil, err
 		}
 	}
 
-	logr, err := config.Build(
+	buildOpts := []zap.Option{
 		zap.WithCaller(false),
+	}
+	if config.writer != nil {
+		f, err := newCore(config)
+		if err != nil {
+			return nil, err
+		}
+		buildOpts = append(buildOpts, zap.WrapCore(f))
+	}
+	logr, err := config.zap.Build(
+		buildOpts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("build: %v", err)
@@ -64,22 +86,37 @@ func New(opts ...Option) (Logger, error) {
 	sugar := logr.Sugar()
 
 	return &logger{
-		log: sugar,
+		log:    sugar,
+		fields: fields{},
 	}, err
 }
 
 func NewCorrelationLogger(opts ...Option) (CorrelationLogger, error) {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	zapc := zap.NewProductionConfig()
+	config := &Config{
+		zap: &zapc,
+	}
+	config.zap.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	for _, opt := range opts {
-		if err := opt.applyOption(&config); err != nil {
+		if err := opt.applyOption(config); err != nil {
 			return nil, err
 		}
 	}
 
-	logr, err := config.Build(
+	buildOpts := []zap.Option{
 		zap.WithCaller(false),
+	}
+	if config.writer != nil {
+		f, err := newCore(config)
+		if err != nil {
+			return nil, err
+		}
+		buildOpts = append(buildOpts, zap.WrapCore(f))
+	}
+
+	logr, err := config.zap.Build(
+		buildOpts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("build: %v", err)
@@ -87,104 +124,148 @@ func NewCorrelationLogger(opts ...Option) (CorrelationLogger, error) {
 	sugar := logr.Sugar()
 
 	return &logger{
-		log: sugar,
+		log:    sugar,
+		fields: fields{},
 	}, err
 }
 
 func (l *logger) Debug(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Debug(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Debug(argsToString(args), fields...)
+		return
 	}
 	l.log.Debug(argsToString(args))
 }
 
 func (l *logger) Debugf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Debug(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Debug(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Debugf(format, args...)
 }
 
 func (l *logger) DPanic(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().DPanic(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().DPanic(argsToString(args), fields...)
+		return
 	}
 	l.log.DPanic(argsToString(args))
 }
 
 func (l *logger) DPanicf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().DPanic(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().DPanic(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.DPanicf(format, args...)
 }
 
 func (l *logger) Error(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Error(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Error(argsToString(args), fields...)
+		return
 	}
 	l.log.Error(argsToString(args))
 }
 
 func (l *logger) Errorf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Error(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Error(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Errorf(format, args...)
 }
 
 func (l *logger) Fatal(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Fatal(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Fatal(argsToString(args), fields...)
+		return
 	}
 	l.log.Fatal(argsToString(args))
 }
 
 func (l *logger) Fatalf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Fatal(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Fatal(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Fatalf(format, args...)
 }
 
 func (l *logger) Info(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Info(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.
+			Desugar().
+			Info(argsToString(args), fields...)
+		return
 	}
 	l.log.Info(argsToString(args))
 }
 
 func (l *logger) Infof(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Info(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Info(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Infof(format, args...)
 }
 
 func (l *logger) Warn(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Warn(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Warn(argsToString(args), fields...)
+		return
 	}
 	l.log.Warn(argsToString(args))
 }
 
 func (l *logger) Warnf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Warn(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Warn(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Warnf(format, args...)
 }
 
 func (l *logger) Panic(args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Panic(argsToString(args), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+
+	if len(fields) > 0 {
+		l.log.Desugar().Panic(argsToString(args), fields...)
+		return
 	}
 	l.log.Panic(argsToString(args))
 }
 
 func (l *logger) Panicf(format string, args ...interface{}) {
-	if l.correlationID != "" {
-		l.log.Desugar().Panic(fmt.Sprintf(format, args...), zap.String(correlationID, l.correlationID))
+	fields := getFields(l.correlationID, l.fields)
+	if len(fields) > 0 {
+		l.log.Desugar().Panic(fmt.Sprintf(format, args...), fields...)
+		return
 	}
 	l.log.Panicf(format, args...)
 }
@@ -193,6 +274,57 @@ func (l *logger) WithCorrelationID(id string) CorrelationLogger {
 	return &logger{
 		log:           l.log,
 		correlationID: id,
+	}
+}
+
+func getFields(cID string, fields fields) []zapcore.Field {
+	out := []zapcore.Field{}
+	if cID != "" {
+		out = append(out, zap.String(correlationID, cID))
+	}
+	for _, field := range fields {
+		if field.key == correlationID {
+			continue
+		}
+		out = append(out, zap.Any(field.key, field.value))
+	}
+	return out
+}
+
+// Fields
+type field struct {
+	key   string
+	value interface{}
+}
+
+type Field interface {
+	Key() string
+	Value() interface{}
+}
+
+type fields = []field
+
+func (l *logger) WithField(key string, value interface{}) FieldLogger {
+	fields := l.fields
+	fields = append(fields, field{key, value})
+
+	return &logger{
+		log:           l.log,
+		correlationID: l.correlationID,
+		fields:        fields,
+	}
+}
+
+func (l *logger) WithFields(in ...Field) FieldLogger {
+	fields := l.fields
+	for _, f := range in {
+		fields = append(fields, field{f.Key(), f.Value()})
+	}
+
+	return &logger{
+		log:           l.log,
+		correlationID: l.correlationID,
+		fields:        fields,
 	}
 }
 
@@ -208,4 +340,16 @@ func argsToString(args []interface{}) string {
 	}
 
 	return sb.String()
+}
+
+type newCoreFunc = func(c zapcore.Core) zapcore.Core
+
+func newCore(config *Config) (newCoreFunc, error) {
+	enc, err := newEncoder(config.zap.Encoding, config.zap.EncoderConfig)
+	if err != nil {
+		return nil, err
+	}
+	return func(c zapcore.Core) zapcore.Core {
+		return zapcore.NewCore(enc, zapcore.AddSync(config.writer), zapcore.DebugLevel)
+	}, err
 }

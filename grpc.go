@@ -46,12 +46,17 @@ func LoggingStreamServerInterceptor(logger CorrelationLogger) grpc.StreamServerI
 
 		logr := logger.WithCorrelationID(cID)
 
-		logr.Infof("stream_server_interceptor=%s", info.FullMethod)
-
+		if l, ok := logr.(FieldLogger); ok {
+			l.
+				WithField("unary_server_interceptor", info.FullMethod).
+				Info("")
+		} else {
+			logr.Infof("stream_server_interceptor=%s", info.FullMethod)
+		}
 		if err := handler(srv, ss); err != nil {
 			logr.Errorf("stream_server_interceptor=%v", err)
 		}
-		return err
+		return nil
 	}
 }
 
@@ -70,7 +75,13 @@ func LoggingUnaryServerInterceptor(logger CorrelationLogger) grpc.UnaryServerInt
 		}
 		logr := logger.WithCorrelationID(cID)
 
-		logr.Infof("unary_server_interceptor=%s request=%+v", info.FullMethod, req)
+		if l, ok := logr.(FieldLogger); ok {
+			l.
+				WithField("request", req).
+				WithField("unary_server_interceptor", info.FullMethod).Info("")
+		} else {
+			logr.Infof("unary_server_interceptor=%s request=%+v", info.FullMethod, req)
+		}
 
 		resp, err := handler(ctx, req)
 		if err != nil {
