@@ -77,8 +77,11 @@ func LoggingUnaryServerInterceptor(logger CorrelationLogger) grpc.UnaryServerInt
 
 		if l, ok := logr.(FieldLogger); ok {
 			l.
-				WithField("request", req).
-				WithField("unary_server_interceptor", info.FullMethod).Info("")
+				WithFields(
+					KV{"request", req},
+					KV{"unary_server_interceptor", info.FullMethod},
+				).
+				Info("")
 		} else {
 			logr.Infof("unary_server_interceptor=%s request=%+v", info.FullMethod, req)
 		}
