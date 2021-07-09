@@ -48,7 +48,7 @@ func LoggingStreamServerInterceptor(logger CorrelationLogger) grpc.StreamServerI
 
 		if l, ok := logr.(FieldLogger); ok {
 			l.
-				WithField("unary_server_interceptor", info.FullMethod).
+				WithField("stream_server_interceptor", info.FullMethod).
 				Info("")
 		} else {
 			logr.Infof("stream_server_interceptor=%s", info.FullMethod)

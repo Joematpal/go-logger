@@ -70,10 +70,11 @@ func TestGetCorrelationIDFromMetadata(t *testing.T) {
 }
 
 type want struct {
-	Level                  string `json:"level,omitempty"`
-	Msg                    string `json:"msg,omitempty"`
-	CorrelationId          string `json:"correlation_id,omitempty"`
-	UnaryServerInterceptor string `json:"unary_server_interceptor,omitempty"`
+	Level                   string `json:"level,omitempty"`
+	Msg                     string `json:"msg,omitempty"`
+	CorrelationId           string `json:"correlation_id,omitempty"`
+	UnaryServerInterceptor  string `json:"unary_server_interceptor,omitempty"`
+	StreamServerInterceptor string `json:"stream_server_interceptor,omitempty"`
 }
 
 func TestLoggingStreamServerInterceptor(t *testing.T) {
@@ -98,7 +99,7 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 			},
 			wants: []want{
 				{Level: "debug", Msg: "no correlation id"},
-				{Level: "info", Msg: "", CorrelationId: "new_test_cor_id", UnaryServerInterceptor: "test/test/test"},
+				{Level: "info", Msg: "", CorrelationId: "new_test_cor_id", StreamServerInterceptor: "test/test/test"},
 			},
 		},
 		{
@@ -107,7 +108,7 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{CorrelationID: []string{"test_with_cor_id"}}),
 			},
 			wants: []want{
-				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", UnaryServerInterceptor: "test/test/test"},
+				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", StreamServerInterceptor: "test/test/test"},
 			},
 		},
 	}
