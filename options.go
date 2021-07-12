@@ -1,18 +1,23 @@
 package logger
 
 import (
+	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 
+	"github.com/digital-dream-labs/go-logger/events"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/sync/errgroup"
 )
 
 type Config struct {
 	writers []io.Writer
-	fields  fields
-	logFile string
-	zap     *zap.Config
+	// fields  fields
+	// logFile string
+	zap *zap.Config
 }
 
 type Option interface {
@@ -87,12 +92,58 @@ func WithWriters(writers ...io.Writer) Option {
 	})
 }
 
-func writeByNewLine(debugger Debugger, reader io.Reader, writers ...io.Writer) {
-	go func() {
-		for i, writer := range writers {
-			if _, err := io.Copy(writer, reader); err != nil {
-				debugger.Debugf("writeByNewLine: writer[%d]: %v", i, err)
+func writeByNewLine(debugger Debugger, reader io.Reader, writers ...io.Writer) error {
+	return writeByNewLineWithContext(context.Background(), debugger, reader, writers...)
+}
+
+func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io.Reader, writers ...io.Writer) error {
+	ctx, cancel := context.WithCancel(ctx)
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	e := events.NewEvents()
+	for _, writer := range writers {
+		writer := writer
+		eg.Go(func() error {
+			event := e.Subscribe("logs")
+			for {
+				select {
+				case data := <-event.Data():
+					if _, err := writer.Write(data); err != nil {
+						cancel()
+						return err
+					}
+				case <-ctx.Done():
+					cancel()
+					err := ctx.Err()
+					if !errors.Is(err, context.Canceled) {
+						return err
+					}
+					return nil
+				}
 			}
-		}
-	}()
+		})
+	}
+
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		b := scanner.Bytes()
+		b = append(b, '\n')
+		e.Publish("logs", b)
+	}
+
+	serr := scanner.Err()
+	cancel()
+	err := eg.Wait()
+	if err != nil {
+		return fmt.Errorf("errgroup: %w", err)
+	}
+	if serr != nil {
+		serr = fmt.Errorf("scanner: %v", serr)
+	}
+	if err != nil || serr != nil {
+		return fmt.Errorf("%v: %v", err, serr)
+	}
+	return nil
 }

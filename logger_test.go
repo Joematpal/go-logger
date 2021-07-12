@@ -102,7 +102,7 @@ func TestNew(t *testing.T) {
 
 			time.Sleep(time.Second)
 
-			defer got.Close()
+			got.Close()
 
 			time.Sleep(time.Second * 10)
 			want, err := io.ReadAll(tt.args.bytes)

@@ -2,12 +2,15 @@ package logger
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"golang.org/x/sync/errgroup"
 )
 
 func Test_writeByNewLine(t *testing.T) {
@@ -25,7 +28,7 @@ func Test_writeByNewLine(t *testing.T) {
 			args: args{
 				bytes: bytes.NewBuffer([]byte{}),
 				writers: []io.Writer{
-					&slowWriter{latency: time.Second}, io.Discard, &slowWriter{latency: time.Second * 5},
+					&slowWriter{latency: time.Second}, io.Discard, &slowWriter{latency: time.Second * 3},
 				},
 				input: [][]byte{
 					[]byte("1 this is a message\n"),
@@ -40,23 +43,42 @@ func Test_writeByNewLine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			reader, writer := io.Pipe()
 			debugger := &testDebugger{}
-
 			tt.args.writers = append(tt.args.writers, tt.args.bytes)
 
-			go writeByNewLine(debugger, reader, tt.args.writers...)
+			var eg errgroup.Group
+
+			eg.Go(func() error {
+				return writeByNewLine(debugger, reader, tt.args.writers...)
+			})
+
+			want := &bytes.Buffer{}
 
 			for _, msg := range tt.args.input {
 				if _, err := writer.Write(msg); err != nil {
 					t.Fatal(err)
 				}
+				if _, err := want.Write(msg); err != nil {
+					t.Fatal(err)
+				}
+			}
+			time.Sleep(time.Second * 20)
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
 			}
 
-			time.Sleep(time.Second * 25)
-			want, err := io.ReadAll(tt.args.bytes)
+			if err := eg.Wait(); err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := io.ReadAll(tt.args.bytes)
 			if err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println("want:", want)
+
+			if !reflect.DeepEqual(got, want.Bytes()) {
+				t.Errorf("diff: %v", cmp.Diff(got, want.Bytes()))
+			}
+
 		})
 	}
 }
@@ -75,7 +97,7 @@ func (sl *slowWriter) Write(in []byte) (int, error) {
 	if err != nil {
 		return len(b), err
 	}
-	log.Printf("slowWriter: %s", b)
+	log.Printf("slowWriter %s: %s", sl.latency, b)
 
 	return len(in), nil
 }

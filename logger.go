@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -51,6 +52,7 @@ type logger struct {
 	correlationID string
 	fields        fields
 	files         []*os.File
+	cancel        context.CancelFunc
 }
 
 type FieldLogger interface {
@@ -82,23 +84,25 @@ func newLogger(opts ...Option) (*logger, error) {
 
 	files := []*os.File{}
 
-	for _, output := range config.zap.OutputPaths {
-		if output == "stderr" {
-			continue
-		}
-
-		f, err := os.Create(output)
-		if err != nil {
-			return nil, fmt.Errorf("create: %v", err)
-		}
-
-		config.writers = append(config.writers, f)
-		files = append(files, f)
-	}
-
 	var reader *io.PipeReader
-	fmt.Println("length of writers", len(config.writers))
+
 	if len(config.writers) != 0 {
+
+		for _, output := range config.zap.OutputPaths {
+			// TODO: find all of the non-filepath outputs and continue
+			if output == "stderr" {
+				continue
+			}
+
+			f, err := os.Create(output)
+			if err != nil {
+				return nil, fmt.Errorf("create: %v", err)
+			}
+
+			config.writers = append(config.writers, f)
+			files = append(files, f)
+		}
+
 		var writer *io.PipeWriter
 		reader, writer = io.Pipe()
 		f, err := newCore(config, writer)
@@ -116,15 +120,17 @@ func newLogger(opts ...Option) (*logger, error) {
 	}
 	sugar := logr.Sugar()
 
+	ctx, cancel := context.WithCancel(context.Background())
 	// Start the Reader
 	if reader != nil {
-		go writeByNewLine(sugar, reader, config.writers...)
+		go writeByNewLineWithContext(ctx, sugar, reader, config.writers...)
 	}
 
 	return &logger{
 		log:    sugar,
 		files:  files,
 		fields: fields{},
+		cancel: cancel,
 	}, err
 }
 
@@ -295,6 +301,8 @@ func getFields(cID string, fields fields) []zapcore.Field {
 }
 
 func (l *logger) Close() error {
+	defer l.cancel()
+
 	var oerr error
 	for _, file := range l.files {
 		if err := file.Close(); err != nil {
@@ -364,6 +372,6 @@ func newCore(config *Config, writer io.Writer) (newCoreFunc, error) {
 	}
 
 	return func(c zapcore.Core) zapcore.Core {
-		return zapcore.NewCore(enc, zapcore.AddSync(writer), zapcore.DebugLevel)
+		return zapcore.NewCore(enc, zapcore.AddSync(writer), config.zap.Level)
 	}, err
 }
