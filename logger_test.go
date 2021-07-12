@@ -107,7 +107,7 @@ func TestNew(t *testing.T) {
 			logr.Debug("debug")
 			logr.Info("info")
 
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second * 5)
 			logr.Close()
 
 			if tt.hasWriters {

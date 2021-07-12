@@ -44,22 +44,20 @@ func NewEvents() *Events {
 }
 
 type iterator struct {
-	topic    string
-	done     chan struct{}
-	ch       chan []byte
-	err      chan error
-	position int
-	unsub    Unsubscriber
+	topic string
+	done  chan struct{}
+	ch    chan []byte
+	err   chan error
+	unsub Unsubscriber
 }
 
-func NewIterator(topic string, position int, unsub Unsubscriber) *iterator {
+func NewIterator(topic string, unsub Unsubscriber) *iterator {
 	return &iterator{
-		topic:    topic,
-		done:     make(chan struct{}),
-		ch:       make(chan []byte),
-		err:      make(chan error),
-		position: position,
-		unsub:    unsub,
+		topic: topic,
+		done:  make(chan struct{}),
+		ch:    make(chan []byte),
+		err:   make(chan error),
+		unsub: unsub,
 	}
 }
 
@@ -99,11 +97,8 @@ func (i *iterator) Close() error {
 
 func (e *Events) Subscribe(topic string) FactoryEvent {
 	e.Lock()
-	pos := len(e.subscribers[topic]) - 1
-	if pos < 0 {
-		pos = 0
-	}
-	iter := NewIterator(topic, pos, e)
+
+	iter := NewIterator(topic, e)
 	if prev, found := e.subscribers[topic]; found {
 		e.subscribers[topic] = append(prev, iter)
 	} else {

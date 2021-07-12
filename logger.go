@@ -120,10 +120,10 @@ func newLogger(opts ...Option) (*logger, error) {
 	}
 	sugar := logr.Sugar()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	// Start the Reader
 	if reader != nil {
-		go writeByNewLineWithContext(ctx, sugar, reader, config.writers...)
+		go writeByNewLineSync(sugar, reader, config.writers...)
 	}
 
 	return &logger{

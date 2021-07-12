@@ -147,3 +147,11 @@ func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io
 	}
 	return nil
 }
+
+func writeByNewLineSync(debugger Debugger, reader io.Reader, writers ...io.Writer) error {
+	wr := io.MultiWriter(writers...)
+	if _, err := io.Copy(wr, reader); err != nil {
+		return err
+	}
+	return nil
+}

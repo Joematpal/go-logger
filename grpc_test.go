@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -139,8 +140,8 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 						return err
 					}
 
-					if !reflect.DeepEqual(got, tt.wants[count]) {
-						return fmt.Errorf("tt.wants[%d] failed", count)
+					if !cmp.Equal(got, tt.wants[count], cmpopts.IgnoreFields(testLogMsg{}, "Ts")) {
+						return fmt.Errorf("tt.wants[%d] failed: %v", count, cmp.Diff(got, tt.wants[count]))
 					}
 				}
 
@@ -271,7 +272,7 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 						return err
 					}
 
-					if !reflect.DeepEqual(got, tt.wants[count]) {
+					if !cmp.Equal(got, tt.wants[count], cmpopts.IgnoreFields(testLogMsg{}, "Ts")) {
 						return fmt.Errorf("tt.wants[%d] failed", count)
 					}
 				}

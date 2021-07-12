@@ -2,9 +2,9 @@ package logger
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -28,7 +28,7 @@ func Test_writeByNewLine(t *testing.T) {
 			args: args{
 				bytes: bytes.NewBuffer([]byte{}),
 				writers: []io.Writer{
-					&slowWriter{latency: time.Second}, io.Discard, &slowWriter{latency: time.Second * 3},
+					&slowWriter{latency: time.Second}, io.Discard, &slowWriter{latency: time.Second * 2},
 				},
 				input: [][]byte{
 					[]byte("1 this is a message\n"),
@@ -61,7 +61,9 @@ func Test_writeByNewLine(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			time.Sleep(time.Second * 20)
+
+			time.Sleep(time.Second * 10)
+
 			if err := writer.Close(); err != nil {
 				t.Fatal(err)
 			}
@@ -75,8 +77,9 @@ func Test_writeByNewLine(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(got, want.Bytes()) {
-				t.Errorf("diff: %v", cmp.Diff(got, want.Bytes()))
+			if !cmp.Equal(got, want.Bytes()) {
+				fmt.Println("got", string(got))
+				t.Errorf("diff: %v", cmp.Diff(string(got), want.String()))
 			}
 
 		})
@@ -97,19 +100,27 @@ func (sl *slowWriter) Write(in []byte) (int, error) {
 	if err != nil {
 		return len(b), err
 	}
-	log.Printf("slowWriter %s: %s", sl.latency, b)
 
 	return len(in), nil
 }
 
 type testDebugger struct {
+	noPrint bool
 }
 
 func (td *testDebugger) Debug(args ...interface{}) {
+	if td.noPrint {
+		return
+	}
 	log.Println(args...)
+
 }
 
 func (td *testDebugger) Debugf(format string, args ...interface{}) {
+	if td.noPrint {
+		return
+	}
 	log.Printf(format, args...)
 	log.Println("")
+
 }
