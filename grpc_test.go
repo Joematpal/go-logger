@@ -70,12 +70,13 @@ func TestGetCorrelationIDFromMetadata(t *testing.T) {
 	}
 }
 
-type want struct {
+type testLogMsg struct {
 	Level                   string `json:"level,omitempty"`
 	Msg                     string `json:"msg,omitempty"`
 	CorrelationId           string `json:"correlation_id,omitempty"`
 	UnaryServerInterceptor  string `json:"unary_server_interceptor,omitempty"`
 	StreamServerInterceptor string `json:"stream_server_interceptor,omitempty"`
+	Ts                      string `json:"ts,omitempty"`
 }
 
 func TestLoggingStreamServerInterceptor(t *testing.T) {
@@ -91,14 +92,14 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 	tests := []struct {
 		name  string
 		args  args
-		wants []want
+		wants []testLogMsg
 	}{
 		{
 			name: "should pass; with no correlation id debug msg",
 			args: args{
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{}),
 			},
-			wants: []want{
+			wants: []testLogMsg{
 				{Level: "debug", Msg: "no correlation id"},
 				{Level: "info", Msg: "", CorrelationId: "new_test_cor_id", StreamServerInterceptor: "test/test/test"},
 			},
@@ -108,7 +109,7 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 			args: args{
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{CorrelationID: []string{"test_with_cor_id"}}),
 			},
-			wants: []want{
+			wants: []testLogMsg{
 				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", StreamServerInterceptor: "test/test/test"},
 			},
 		},
@@ -133,7 +134,7 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 				count := 0
 				for ; scanner.Scan(); count++ {
 					text := scanner.Text()
-					var got want
+					var got testLogMsg
 					if err := json.Unmarshal([]byte(text), &got); err != nil {
 						return err
 					}
@@ -223,14 +224,14 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 	tests := []struct {
 		name  string
 		args  args
-		wants []want
+		wants []testLogMsg
 	}{
 		{
 			name: "should pass; with no correlation id debug msg",
 			args: args{
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{}),
 			},
-			wants: []want{
+			wants: []testLogMsg{
 				{Level: "debug", Msg: "no correlation id"},
 				{Level: "info", Msg: "", CorrelationId: "new_test_cor_id", UnaryServerInterceptor: "test/test/test"},
 			},
@@ -240,7 +241,7 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 			args: args{
 				ctx: metadata.NewIncomingContext(context.Background(), metadata.MD{CorrelationID: []string{"test_with_cor_id"}}),
 			},
-			wants: []want{
+			wants: []testLogMsg{
 				{Level: "info", Msg: "", CorrelationId: "test_with_cor_id", UnaryServerInterceptor: "test/test/test"},
 			},
 		},
@@ -265,7 +266,7 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 				count := 0
 				for ; scanner.Scan(); count++ {
 					text := scanner.Text()
-					var got want
+					var got testLogMsg
 					if err := json.Unmarshal([]byte(text), &got); err != nil {
 						return err
 					}
