@@ -9,8 +9,10 @@ import (
 )
 
 type Config struct {
-	writer io.Writer
-	zap    *zap.Config
+	writers []io.Writer
+	fields  fields
+	logFile string
+	zap     *zap.Config
 }
 
 type Option interface {
@@ -59,7 +61,7 @@ func WithLogStacktrace(lst bool) Option {
 
 func withWriter(writer io.Writer) Option {
 	return applyOptionFunc(func(c *Config) error {
-		c.writer = writer
+		c.writers = append(c.writers, writer)
 		return nil
 	})
 }
@@ -69,4 +71,28 @@ func WithInitialFields(fields map[string]interface{}) Option {
 		c.zap.InitialFields = fields
 		return nil
 	})
+}
+
+func WithLogFile(logFile string) Option {
+	return applyOptionFunc(func(c *Config) error {
+		c.zap.OutputPaths = append(c.zap.OutputPaths, logFile)
+		return nil
+	})
+}
+
+func WithWriters(writers ...io.Writer) Option {
+	return applyOptionFunc(func(c *Config) error {
+		c.writers = append(c.writers, writers...)
+		return nil
+	})
+}
+
+func writeByNewLine(debugger Debugger, reader io.Reader, writers ...io.Writer) {
+	go func() {
+		for i, writer := range writers {
+			if _, err := io.Copy(writer, reader); err != nil {
+				debugger.Debugf("writeByNewLine: writer[%d]: %v", i, err)
+			}
+		}
+	}()
 }

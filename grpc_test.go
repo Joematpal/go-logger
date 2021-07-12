@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"testing"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -162,11 +163,11 @@ func TestLoggingStreamServerInterceptor(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			time.Sleep(time.Second)
 			// Close the logger writer
 			writer.Close()
 
 			if err := eg.Wait(); err != nil {
-				fmt.Println("err", err)
 				t.Error(err)
 			}
 
@@ -293,11 +294,12 @@ func TestLoggingUnaryServerInterceptor(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			time.Sleep(time.Second)
+
 			// Close the logger writer
 			writer.Close()
 
 			if err := eg.Wait(); err != nil {
-				fmt.Println("err", err)
 				t.Error(err)
 			}
 
