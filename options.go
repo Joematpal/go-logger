@@ -105,7 +105,7 @@ func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io
 	for _, writer := range writers {
 		writer := writer
 		eg.Go(func() error {
-			event := e.Subscribe("logs")
+			event := e.Subscribe()
 			for {
 				select {
 				case data := <-event.Data():
@@ -130,7 +130,7 @@ func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io
 	for scanner.Scan() {
 		b := scanner.Bytes()
 		b = append(b, '\n')
-		e.Publish("logs", b)
+		e.Publish(b)
 	}
 
 	serr := scanner.Err()
