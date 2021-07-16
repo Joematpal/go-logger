@@ -135,6 +135,7 @@ func newLogger(opts ...Option) (*logger, error) {
 	}, err
 }
 
+// Deprecated: NewCorrelationLogger is deprecated; use New they do the same thing
 func NewCorrelationLogger(opts ...Option) (*logger, error) {
 	return newLogger(opts...)
 }
