@@ -3,6 +3,7 @@ module github.com/digital-dream-labs/go-logger
 go 1.16
 
 require (
+	github.com/google/go-cmp v0.5.0
 	github.com/rs/xid v1.3.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/atomic v1.8.0 // indirect

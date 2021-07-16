@@ -1,7 +1,10 @@
 package logger
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"go.uber.org/zap"
@@ -12,10 +15,14 @@ var (
 	CorrelationID = "correlation_id"
 )
 
-// Logger represent common interface for logging function
-type Logger interface {
+type Debugger interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
+}
+
+// Logger represent common interface for logging function
+type Logger interface {
+	Debugger
 	Error(args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatal(args ...interface{})
@@ -32,6 +39,7 @@ type Logger interface {
 
 type CorrelationLogger interface {
 	Logger
+	FieldLogger
 	WithCorrelationID(id string) CorrelationLogger
 }
 
@@ -44,17 +52,21 @@ type logger struct {
 	log           SugaredLogger
 	correlationID string
 	fields        fields
+	files         []*os.File
+	cancel        context.CancelFunc
 }
 
 type FieldLogger interface {
-	// Logger
-	// WithCorrelationID(id string) CorrelationLogger
-	CorrelationLogger
+	Logger
 	WithField(key string, value interface{}) FieldLogger
 	WithFields(in ...Field) FieldLogger
 }
 
-func New(opts ...Option) (Logger, error) {
+func New(opts ...Option) (*logger, error) {
+	return newLogger(opts...)
+}
+
+func newLogger(opts ...Option) (*logger, error) {
 	zapc := zap.NewProductionConfig()
 	config := &Config{
 		zap: &zapc,
@@ -70,13 +82,37 @@ func New(opts ...Option) (Logger, error) {
 	buildOpts := []zap.Option{
 		zap.WithCaller(false),
 	}
-	if config.writer != nil {
-		f, err := newCore(config)
+
+	files := []*os.File{}
+
+	var reader *io.PipeReader
+
+	if len(config.writers) != 0 {
+
+		for _, output := range config.zap.OutputPaths {
+			// TODO: find all of the non-filepath outputs and continue
+			if output == "stderr" {
+				continue
+			}
+
+			f, err := os.Create(output)
+			if err != nil {
+				return nil, fmt.Errorf("create: %v", err)
+			}
+
+			config.writers = append(config.writers, f)
+			files = append(files, f)
+		}
+
+		var writer *io.PipeWriter
+		reader, writer = io.Pipe()
+		f, err := newCore(config, writer)
 		if err != nil {
 			return nil, err
 		}
 		buildOpts = append(buildOpts, zap.WrapCore(f))
 	}
+
 	logr, err := config.zap.Build(
 		buildOpts...,
 	)
@@ -85,48 +121,22 @@ func New(opts ...Option) (Logger, error) {
 	}
 	sugar := logr.Sugar()
 
+	_, cancel := context.WithCancel(context.Background())
+	// Start the Reader
+	if reader != nil {
+		go writeByNewLineSync(sugar, reader, config.writers...)
+	}
+
 	return &logger{
 		log:    sugar,
+		files:  files,
 		fields: fields{},
+		cancel: cancel,
 	}, err
 }
 
-func NewCorrelationLogger(opts ...Option) (CorrelationLogger, error) {
-	zapc := zap.NewProductionConfig()
-	config := &Config{
-		zap: &zapc,
-	}
-	config.zap.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	for _, opt := range opts {
-		if err := opt.applyOption(config); err != nil {
-			return nil, err
-		}
-	}
-
-	buildOpts := []zap.Option{
-		zap.WithCaller(false),
-	}
-	if config.writer != nil {
-		f, err := newCore(config)
-		if err != nil {
-			return nil, err
-		}
-		buildOpts = append(buildOpts, zap.WrapCore(f))
-	}
-
-	logr, err := config.zap.Build(
-		buildOpts...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("build: %v", err)
-	}
-	sugar := logr.Sugar()
-
-	return &logger{
-		log:    sugar,
-		fields: fields{},
-	}, err
+func NewCorrelationLogger(opts ...Option) (*logger, error) {
+	return newLogger(opts...)
 }
 
 func (l *logger) Debug(args ...interface{}) {
@@ -291,6 +301,18 @@ func getFields(cID string, fields fields) []zapcore.Field {
 	return out
 }
 
+func (l *logger) Close() error {
+	defer l.cancel()
+
+	var oerr error
+	for _, file := range l.files {
+		if err := file.Close(); err != nil {
+			oerr = fmt.Errorf("%v: %w", oerr, err)
+		}
+	}
+	return oerr
+}
+
 // Fields
 type field struct {
 	key   string
@@ -344,12 +366,13 @@ func argsToString(args []interface{}) string {
 
 type newCoreFunc = func(c zapcore.Core) zapcore.Core
 
-func newCore(config *Config) (newCoreFunc, error) {
+func newCore(config *Config, writer io.Writer) (newCoreFunc, error) {
 	enc, err := newEncoder(config.zap.Encoding, config.zap.EncoderConfig)
 	if err != nil {
 		return nil, err
 	}
+
 	return func(c zapcore.Core) zapcore.Core {
-		return zapcore.NewCore(enc, zapcore.AddSync(config.writer), zapcore.DebugLevel)
+		return zapcore.NewCore(enc, zapcore.AddSync(writer), config.zap.Level)
 	}, err
 }
