@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/digital-dream-labs/go-logger/event"
+	"github.com/joematpal/go-logger/event"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
@@ -90,11 +90,11 @@ func WithWriters(writers ...io.Writer) Option {
 	})
 }
 
-func writeByNewLine(debugger Debugger, reader io.Reader, writers ...io.Writer) error {
-	return writeByNewLineWithContext(context.Background(), debugger, reader, writers...)
+func writeByNewLine(factoryError FactoryError, reader io.Reader, writers ...io.Writer) error {
+	return writeByNewLineWithContext(context.Background(), factoryError, reader, writers...)
 }
 
-func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io.Reader, writers ...io.Writer) error {
+func writeByNewLineWithContext(ctx context.Context, factoryError FactoryError, reader io.Reader, writers ...io.Writer) error {
 	ctx, cancel := context.WithCancel(ctx)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -146,9 +146,10 @@ func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io
 	return nil
 }
 
-func writeByNewLineSync(debugger Debugger, reader io.Reader, writers ...io.Writer) error {
+func writeByNewLineSync(factoryError FactoryError, reader io.Reader, writers ...io.Writer) error {
 	wr := io.MultiWriter(writers...)
 	if _, err := io.Copy(wr, reader); err != nil {
+		factoryError.Error(err)
 		return err
 	}
 	return nil

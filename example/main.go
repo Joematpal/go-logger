@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	logger "github.com/digital-dream-labs/go-logger"
-	nested "github.com/digital-dream-labs/go-logger/example/nested_package"
-	"github.com/digital-dream-labs/go-logger/flags"
+	logger "github.com/joematpal/go-logger"
+	nested "github.com/joematpal/go-logger/example/nested_package"
+	"github.com/joematpal/go-logger/flags"
 	"github.com/urfave/cli/v2"
 )
 

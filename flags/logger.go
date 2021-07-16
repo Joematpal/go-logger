@@ -3,7 +3,7 @@ package flags
 import (
 	"strings"
 
-	"github.com/digital-dream-labs/go-logger"
+	"github.com/joematpal/go-logger"
 	cli "github.com/urfave/cli/v2"
 )
 

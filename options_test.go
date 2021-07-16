@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -104,6 +105,14 @@ func (sl *slowWriter) Write(in []byte) (int, error) {
 	return len(in), nil
 }
 
+type errWriter struct {
+}
+
+func (ew errWriter) Write(in []byte) (int, error) {
+
+	return 0, errors.New("failed")
+}
+
 type testDebugger struct {
 	noPrint bool
 }
@@ -123,4 +132,19 @@ func (td *testDebugger) Debugf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 	log.Println("")
 
+}
+
+func (td *testDebugger) Error(args ...interface{}) {
+	if td.noPrint {
+		return
+	}
+	log.Println(args...)
+}
+
+func (td *testDebugger) Errorf(format string, args ...interface{}) {
+	if td.noPrint {
+		return
+	}
+	log.Printf(format, args...)
+	log.Println("")
 }

@@ -3,7 +3,7 @@ package nested
 import (
 	"errors"
 
-	logger "github.com/digital-dream-labs/go-logger/example/logger"
+	logger "github.com/joematpal/go-logger/example/logger"
 )
 
 type Client struct {

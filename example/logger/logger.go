@@ -1,7 +1,7 @@
 package logger
 
 import (
-	logger "github.com/digital-dream-labs/go-logger"
+	logger "github.com/joematpal/go-logger"
 )
 
 type Logger = logger.Logger
