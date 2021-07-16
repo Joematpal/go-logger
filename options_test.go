@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Test_writeByNewLine(t *testing.T) {
+func Test_writeByNewLineSync(t *testing.T) {
 	type args struct {
 		writers []io.Writer
 		input   [][]byte
@@ -48,7 +48,7 @@ func Test_writeByNewLine(t *testing.T) {
 			var eg errgroup.Group
 
 			eg.Go(func() error {
-				return writeByNewLine(debugger, reader, tt.args.writers...)
+				return writeByNewLineSync(debugger, reader, tt.args.writers...)
 			})
 
 			want := &bytes.Buffer{}

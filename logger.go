@@ -39,6 +39,7 @@ type Logger interface {
 
 type CorrelationLogger interface {
 	Logger
+	FieldLogger
 	WithCorrelationID(id string) CorrelationLogger
 }
 
@@ -56,7 +57,7 @@ type logger struct {
 }
 
 type FieldLogger interface {
-	CorrelationLogger
+	Logger
 	WithField(key string, value interface{}) FieldLogger
 	WithFields(in ...Field) FieldLogger
 }

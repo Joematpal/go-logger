@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/digital-dream-labs/go-logger/events"
+	"github.com/digital-dream-labs/go-logger/event"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
@@ -15,9 +15,7 @@ import (
 
 type Config struct {
 	writers []io.Writer
-	// fields  fields
-	// logFile string
-	zap *zap.Config
+	zap     *zap.Config
 }
 
 type Option interface {
@@ -101,14 +99,14 @@ func writeByNewLineWithContext(ctx context.Context, debugger Debugger, reader io
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	e := events.NewEvents()
+	e := event.New()
 	for _, writer := range writers {
 		writer := writer
 		eg.Go(func() error {
-			event := e.Subscribe()
+			itr := e.Subscribe()
 			for {
 				select {
-				case data := <-event.Data():
+				case data := <-itr.Data():
 					if _, err := writer.Write(data); err != nil {
 						cancel()
 						return err

@@ -1,4 +1,4 @@
-package events
+package event
 
 import (
 	"sync"
@@ -32,13 +32,13 @@ type Publisher interface {
 
 type DataChannelSlice []FactoryEvent
 
-type Events struct {
+type Event struct {
 	sync.RWMutex
 	subscribers DataChannelSlice
 }
 
-func NewEvents() *Events {
-	return &Events{
+func New() *Event {
+	return &Event{
 		subscribers: DataChannelSlice{},
 	}
 }
@@ -94,7 +94,7 @@ func (i *iterator) Close() error {
 	return uerr
 }
 
-func (e *Events) Subscribe() FactoryEvent {
+func (e *Event) Subscribe() FactoryEvent {
 	e.Lock()
 	defer e.Unlock()
 
@@ -104,7 +104,7 @@ func (e *Events) Subscribe() FactoryEvent {
 	return iter
 }
 
-func (e *Events) Unsubscribe(iter unsafe.Pointer) error {
+func (e *Event) Unsubscribe(iter unsafe.Pointer) error {
 	e.Lock()
 	defer e.Unlock()
 
@@ -116,7 +116,6 @@ func (e *Events) Unsubscribe(iter unsafe.Pointer) error {
 		val, ok := v.(*iterator)
 		if ok && unsafe.Pointer(val) == iter {
 			loc = i
-
 		}
 	}
 
@@ -128,7 +127,7 @@ func remove(slice []FactoryEvent, s int) []FactoryEvent {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-func (e *Events) Publish(data []byte) {
+func (e *Event) Publish(data []byte) {
 	e.RLock()
 	defer e.RUnlock()
 	// this is done because the slices refer to same array even though they are passed by value

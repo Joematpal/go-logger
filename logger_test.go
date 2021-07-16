@@ -110,6 +110,7 @@ func TestNew(t *testing.T) {
 			time.Sleep(time.Second * 5)
 			logr.Close()
 
+			// hasWriters will test the code if we supply writers to the logger core
 			if tt.hasWriters {
 				want, err := io.ReadAll(tt.args.bytes)
 				if err != nil {
@@ -131,6 +132,7 @@ func TestNew(t *testing.T) {
 				return
 			}
 
+			// This section is testing the "native" write functionality
 			f, err := os.Open(tt.args.logFile)
 			if err != nil {
 				t.Fatal(err)
